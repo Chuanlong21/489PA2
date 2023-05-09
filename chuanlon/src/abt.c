@@ -21,8 +21,8 @@
 /********* STUDENTS WRITE THE NEXT SIX ROUTINES *********/
 #define MAX_STACK_SIZE 1000
 
-int ackNum = 0;
-int seq = 1;
+
+int s = 1;
 struct pkt H_packet;
 int rev = 1;
 int e = 0;
@@ -94,12 +94,10 @@ void A_output(message)
         struct pkt p;
         memset(p.payload, '\0', 20);
         strncpy(p.payload, message.data,20);
-        p.acknum = 0;
-        p.seqnum = !seq;
+        p.seqnum = !s;
         p.checksum = AddCheckSum(p);
 
-        seq = p.seqnum;
-        ackNum = p.acknum;
+        s = p.seqnum;
         H_packet = p;
 
         starttimer(0,15);
@@ -112,21 +110,19 @@ void A_input(packet)
   struct pkt packet;
 {
     int checksum = AddCheckSum(packet);
-    if (checksum != packet.checksum ) return;
+    if (checksum != packet.checksum || packet.acknum != H_packet.seqnum) return;
     stoptimer(0);
     rev = 1;
     if (!isEmpty()){
         struct pkt p;
-        p.seqnum = !seq;
+        p.seqnum = !s;
         p.acknum = 0;
         memset(p.payload, '\0', 20);
         strncpy(p.payload, peek(),20);
         p.checksum = AddCheckSum(p);
 
-        seq = p.seqnum;
-        ackNum = p.acknum;
+        s = p.seqnum;
         H_packet = p;
-
 
         starttimer(0,15);
         tolayer3(0,H_packet);
@@ -164,7 +160,6 @@ void B_input(packet)
     if(checksum == packet.checksum){
         struct pkt ack;
         ack.acknum = packet.seqnum;
-        ack.seqnum = 0;
         ack.checksum = ack.acknum;
         if (e == packet.seqnum){
             tolayer5(1,packet.payload);
