@@ -34,8 +34,7 @@ int top = -1;
 
 void push(char* val) {
     if (top < MAX_STACK_SIZE - 1) {
-        stack[++top] = malloc(20);
-        memset(stack[top], '\0', 20);
+        memset(stack[++top], '\0', 20);
         strncpy(stack[top], val, 20);
     } else {
         printf("Stack overflow!\n");
