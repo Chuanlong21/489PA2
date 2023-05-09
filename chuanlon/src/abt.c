@@ -18,7 +18,7 @@
 /********* STUDENTS WRITE THE NEXT SIX ROUTINES *********/
 int ackNum = 0;
 struct pkt H_packet;
-int rev = 0;
+int rev = 1;
 int seq = 0;
 char * buffer;
 
@@ -34,6 +34,7 @@ int AddCheckSum(struct pkt packet){
 void A_output(message)
   struct msg message;
 {
+    if (rev == 1){
         strncpy(H_packet.payload, message.data,20);
         strncpy(buffer,message.data,20);
         H_packet.acknum = ackNum;
@@ -41,6 +42,7 @@ void A_output(message)
         H_packet.checksum = AddCheckSum(H_packet);
         starttimer(0,5);
         tolayer3(0,H_packet);
+    }
 }
 
 /* called from layer 3, when a packet arrives for layer 4 */
@@ -49,7 +51,8 @@ void A_input(packet)
 {
     stoptimer(1);
     if (packet.acknum != ackNum){
-
+        A_timerinterrupt();
+        return;
     }
     if (ackNum == 0) ackNum = 1;
     else ackNum = 0;
@@ -60,16 +63,19 @@ void A_input(packet)
 void A_timerinterrupt()
 {
     //处理超时
+    starttimer(0,5);
     tolayer3(0,H_packet);
 
 
-}  
+}
+
 
 /* the following routine will be called once (only) before any other */
 /* entity A routines are called. You can use it to do any initialization */
 void A_init()
 {
     ackNum = 0;
+    buffer = malloc(20);
 }
 
 /* Note that with simplex transfer from a-to-B, there is no B_output() */
@@ -82,8 +88,12 @@ void B_input(packet)
     int checksum = AddCheckSum(packet);
     if(checksum == packet.checksum){
         starttimer(1,5);
-        tolayer3(1,H_packet);
+        rev =  1;
+        tolayer3(1, packet);
         tolayer5(1,packet.payload);
+    } else {
+        rev = 0;
+        A_timerinterrupt();
     }
 }
 
