@@ -63,17 +63,6 @@ int isEmpty() {
     return top == -1;
 }
 
-//int main(void) {
-//    push("halo");
-//    pop();
-//    push("hahah");
-//    push("bb");
-//    for (int i = 0; i < top+1; ++i) {
-//        printf("%s\n",stack[i]);
-//    }
-//
-//    return 0;
-//}
 
 int AddCheckSum(struct pkt packet){
     int sum = packet.seqnum + packet.acknum;
