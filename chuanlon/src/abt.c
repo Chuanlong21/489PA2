@@ -34,15 +34,19 @@ int AddCheckSum(struct pkt packet){
 void A_output(message)
   struct msg message;
 {
-    if (rev == 1){
-        strncpy(H_packet.payload, message.data,20);
+    if (!rev){
         strncpy(buffer,message.data,20);
+        return;
+    }
+
+        strncpy(H_packet.payload, message.data,20);
         H_packet.acknum = ackNum;
         H_packet.seqnum = seq;
         H_packet.checksum = AddCheckSum(H_packet);
         starttimer(0,5);
         tolayer3(0,H_packet);
-    }
+        rev = 0;
+
 }
 
 /* called from layer 3, when a packet arrives for layer 4 */
