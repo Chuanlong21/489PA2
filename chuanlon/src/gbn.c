@@ -82,6 +82,7 @@ void A_timerinterrupt()
     for (int i = base; i < nextseqnum; ++i) {
         tolayer3(0, window[i % WINDOW_SIZE]);
     }
+    stoptimer(0);
     starttimer(0, 20.0f);
 }
 /* the following routine will be called once (only) before any other */
