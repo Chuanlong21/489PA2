@@ -25,6 +25,7 @@ int ackNum = 0;
 int seq = 1;
 struct pkt H_packet;
 int rev = 1;
+int e = 0;
 
 //char * buffer;
 
@@ -165,8 +166,11 @@ void B_input(packet)
         ack.acknum = packet.seqnum;
         ack.seqnum = 0;
         ack.checksum = ack.acknum;
+        if (e == packet.seqnum){
+            tolayer5(1,packet.payload);
+            e = !e;
+        }
         tolayer3(1, ack);
-        tolayer5(1,packet.payload);
     }
 }
 
