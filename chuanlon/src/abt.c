@@ -19,7 +19,7 @@
 **********************************************************************/
 
 /********* STUDENTS WRITE THE NEXT SIX ROUTINES *********/
-#define MAX_STACK_SIZE 2000
+#define MAX_STACK_SIZE 1000
 
 
 int s = 1;
@@ -31,10 +31,12 @@ int e = 0;
 
 char* stack[MAX_STACK_SIZE];
 int top = -1;
+struct msg** buf;
 
 void push(char* val) {
     if (top < MAX_STACK_SIZE - 1) {
-        memset(stack[++top], '\0', 20);
+        stack[++top] = malloc(20);
+        memset(stack[top], '\0', 20);
         strncpy(stack[top], val, 20);
     } else {
         printf("Stack overflow!\n");
@@ -76,7 +78,9 @@ void A_output(message)
   struct msg message;
 {
     if (!rev){
-        push(message.data);
+//        push(message.data);
+        memset(buf[++top]->data, '\0', 20);
+        memcpy(buf[top]->data, message.data, 20);
         return;
     }
         struct pkt p;
@@ -106,7 +110,8 @@ void A_input(packet)
         p.seqnum = !s;
         p.acknum = 0;
         memset(p.payload, '\0', 20);
-        strncpy(p.payload, peek(),20);
+//        strncpy(p.payload, peek(),20);
+        strncpy(p.payload, buf[top]->data,20);
         p.checksum = AddCheckSum(p);
 
         s = p.seqnum;
@@ -115,7 +120,8 @@ void A_input(packet)
         starttimer(0,15);
         tolayer3(0,H_packet);
         rev = 0;
-        pop();
+        top--;
+//        pop();
     }
 }
 
@@ -133,7 +139,10 @@ void A_timerinterrupt()
 /* entity A routines are called. You can use it to do any initialization */
 void A_init()
 {
-
+    buf = malloc(MAX_STACK_SIZE * sizeof (struct msg*));
+    for (int i = 0; i < MAX_STACK_SIZE; ++i) {
+        buf[i] = malloc(sizeof (struct msg));
+    }
 }
 
 /* Note that with simplex transfer from a-to-B, there is no B_output() */
