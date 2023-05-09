@@ -34,7 +34,8 @@ int top = -1;
 void push(char* val) {
     if (top < MAX_STACK_SIZE - 1) {
         stack[++top] = malloc(20);
-        memcpy(stack[top], val, 20);
+        memset(stack[top], '\0', 20);
+        strncpy(stack[top], val, 20);
     } else {
         printf("Stack overflow!\n");
     }
@@ -89,7 +90,6 @@ void A_output(message)
         push(message.data);
         return;
     }
-
         struct pkt p;
         memset(p.payload, '\0', 20);
         strncpy(p.payload, message.data,20);
@@ -140,7 +140,6 @@ void A_timerinterrupt()
     //处理超时
     starttimer(0,15);
     tolayer3(0,H_packet);
-
 
 }
 
