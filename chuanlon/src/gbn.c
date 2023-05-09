@@ -22,6 +22,7 @@ int AddCheckSum(struct pkt packet){
     }
     return sum;
 }
+
 /* called from layer 5, passed the data to be sent to other side */
 void A_output(message)
   struct msg message;

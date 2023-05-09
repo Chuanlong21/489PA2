@@ -27,43 +27,12 @@ struct pkt H_packet;
 int rev = 1;
 int e = 0;
 
-//char * buffer;
-
-char* stack[MAX_STACK_SIZE];
 int top = -1;
 struct msg** buf;
-
-void push(char* val) {
-    if (top < MAX_STACK_SIZE - 1) {
-        stack[++top] = malloc(20);
-        memset(stack[top], '\0', 20);
-        strncpy(stack[top], val, 20);
-    } else {
-        printf("Stack overflow!\n");
-    }
-}
-
-char* pop() {
-    if (top >= 0) {
-        return stack[top--];
-    } else {
-        printf("Stack underflow!\n");
-        return NULL;
-    }
-}
-char* peek() {
-    if (top >= 0) {
-        return stack[top];
-    } else {
-        printf("Stack is empty!\n");
-        return NULL;
-    }
-}
 
 int isEmpty() {
     return top == -1;
 }
-
 
 int AddCheckSum(struct pkt packet){
     int sum = packet.seqnum + packet.acknum;
@@ -92,7 +61,7 @@ void A_output(message)
         s = p.seqnum;
         H_packet = p;
 
-        starttimer(0,15);
+        starttimer(0,15.0f);
         tolayer3(0,H_packet);
         rev = 0;
 }
@@ -110,18 +79,16 @@ void A_input(packet)
         p.seqnum = !s;
         p.acknum = 0;
         memset(p.payload, '\0', 20);
-//        strncpy(p.payload, peek(),20);
         strncpy(p.payload, buf[top]->data,20);
         p.checksum = AddCheckSum(p);
 
         s = p.seqnum;
         H_packet = p;
 
-        starttimer(0,15);
+        starttimer(0,15.0f);
         tolayer3(0,H_packet);
         rev = 0;
         top--;
-//        pop();
     }
 }
 
@@ -129,11 +96,10 @@ void A_input(packet)
 void A_timerinterrupt()
 {
     //处理超时
-    starttimer(0,15);
+    starttimer(0,15.0f);
     tolayer3(0,H_packet);
 
 }
-
 
 /* the following routine will be called once (only) before any other */
 /* entity A routines are called. You can use it to do any initialization */
