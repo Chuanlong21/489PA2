@@ -61,7 +61,7 @@ void A_output(message)
         s = p.seqnum;
         H_packet = p;
 
-        starttimer(0,15.0f);
+        starttimer(0,20.0f);
         tolayer3(0,H_packet);
         rev = 0;
 }
@@ -85,7 +85,7 @@ void A_input(packet)
         s = p.seqnum;
         H_packet = p;
 
-        starttimer(0,15.0f);
+        starttimer(0,20.0f);
         tolayer3(0,H_packet);
         rev = 0;
         top--;
@@ -96,7 +96,7 @@ void A_input(packet)
 void A_timerinterrupt()
 {
     //处理超时
-    starttimer(0,15.0f);
+    starttimer(0,20.0f);
     tolayer3(0,H_packet);
 
 }
