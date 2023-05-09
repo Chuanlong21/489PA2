@@ -15,6 +15,13 @@
 
 /********* STUDENTS WRITE THE NEXT SEVEN ROUTINES *********/
 
+int AddCheckSum(struct pkt packet){
+    int sum = packet.seqnum + packet.acknum;
+    for (int i = 0; i < 20; ++i) {
+        sum += packet.payload[i];
+    }
+    return sum;
+}
 /* called from layer 5, passed the data to be sent to other side */
 void A_output(message)
   struct msg message;

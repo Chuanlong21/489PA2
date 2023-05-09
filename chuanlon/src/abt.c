@@ -19,7 +19,7 @@
 **********************************************************************/
 
 /********* STUDENTS WRITE THE NEXT SIX ROUTINES *********/
-#define MAX_STACK_SIZE 1000
+#define MAX_STACK_SIZE 2000
 
 
 int s = 1;
