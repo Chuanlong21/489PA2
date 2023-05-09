@@ -89,15 +89,18 @@ void A_output(message)
         push(message.data);
         return;
     }
-        strncpy(H_packet.payload, message.data,20);
-        H_packet.acknum = 0;
-        H_packet.seqnum = !seq;
-        H_packet.checksum = AddCheckSum(H_packet);
 
-        seq = H_packet.seqnum;
-        ackNum = H_packet.acknum;
+        struct pkt p;
+        strncpy(p.payload, message.data,20);
+        p.acknum = 0;
+        p.seqnum = !seq;
+        p.checksum = AddCheckSum(p);
 
-        starttimer(0,5);
+        seq = p.seqnum;
+        ackNum = p.acknum;
+        H_packet = p;
+
+        starttimer(0,15);
         tolayer3(0,H_packet);
         rev = 0;
 }
@@ -115,8 +118,17 @@ void A_input(packet)
         p.seqnum = !seq;
         p.acknum = 0;
         strncpy(p.payload, peek(),20);
+        p.checksum = AddCheckSum(p);
+
+        seq = p.seqnum;
+        ackNum = p.acknum;
+        H_packet = p;
 
 
+        starttimer(0,15);
+        tolayer3(0,H_packet);
+        rev = 0;
+        pop();
     }
 }
 
@@ -124,7 +136,7 @@ void A_input(packet)
 void A_timerinterrupt()
 {
     //处理超时
-    starttimer(0,5);
+    starttimer(0,15);
     tolayer3(0,H_packet);
 
 
