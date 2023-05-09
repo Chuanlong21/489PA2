@@ -5,7 +5,7 @@
 /* ******************************************************************
  ALTERNATING BIT AND GO-BACK-N NETWORK EMULATOR: VERSION 1.1  J.F.Kurose
 
-   This code should be used for PA2, unidirectional data transfer 
+   This code should be used for PA2, unidirectional data transfer
    protocols (from A to B). Network properties:
    - one way network delay averages five time units (longer if there
      are other messages in the channel for GBN), but can be larger
@@ -117,63 +117,11 @@ void A_init()
 void B_input(packet)
   struct pkt packet;
 {
-    if (AddCheckSum(packet) == packet.checksum && packet.seqnum >= base && packet.seqnum < base + WINDOW_SIZE) {
-        // send ACK
-        struct pkt ack;
-        ack.acknum = packet.seqnum;
-        ack.checksum = AddCheckSum(ack);
-        tolayer3(1, ack);
-        // deliver data
-        struct msg message;
-        strncpy(message.data, packet.payload, 20);
-        tolayer5(1, message.data);
-
-        // update base
-        int old_base = base;
-        base = packet.seqnum + 1;
-
-        // check buffer
-        while (last_in_buffer >= 0 && nextseqnum < base + WINDOW_SIZE) {
-            // send packet
-            struct msg msg = buffer[last_in_buffer--];
-            struct pkt packet;
-            packet.seqnum = nextseqnum;
-            packet.acknum = 0;
-            memset(packet.payload, '\0', 20);
-            strncpy(packet.payload, msg.data, 20);
-            packet.checksum = AddCheckSum(packet);
-            window[nextseqnum % WINDOW_SIZE] = packet;
-
-            tolayer3(0, packet);
-            unacked++;
-            if (nextseqnum == base) {
-                starttimer(0, 20.0f);
-            }
-            nextseqnum++;
-        }
-        // stop timer if necessary
-        if (base != old_base) {
-            if (unacked == 0) {
-                stoptimer(0);
-            } else {
-                starttimer(0, 20.0f);
-            }
-        }
-    } else {
-        // send duplicate ACK
-        struct pkt ack;
-        ack.acknum = (base > 0) ? base - 1 : 0;
-        ack.checksum = AddCheckSum(ack);
-        tolayer3(1, ack);
-    }
 }
 
 /* the following rouytine will be called once (only) before any other */
 /* entity B routines are called. You can use it to do any initialization */
 void B_init()
 {
-    base = 0;
-    nextseqnum = 0;
-    unacked = 0;
-    last_in_buffer = -1;
+
 }
