@@ -91,6 +91,7 @@ void A_output(message)
     }
 
         struct pkt p;
+        memset(p.payload, '\0', 20);
         strncpy(p.payload, message.data,20);
         p.acknum = 0;
         p.seqnum = !seq;
@@ -117,6 +118,7 @@ void A_input(packet)
         struct pkt p;
         p.seqnum = !seq;
         p.acknum = 0;
+        memset(p.payload, '\0', 20);
         strncpy(p.payload, peek(),20);
         p.checksum = AddCheckSum(p);
 
