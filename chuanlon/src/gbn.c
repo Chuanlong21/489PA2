@@ -16,16 +16,18 @@
 **********************************************************************/
 
 /********* STUDENTS WRITE THE NEXT SEVEN ROUTINES *********/
-#define MAX_SEQ_NUM 8  // 取值范围是[0,7]
-#define WINDOW_SIZE 4
+#define MAX_WINDOW_SIZE 8
+#define MAX_STACK_SIZE 1000
 
 int base = 0;
-int nextseqnum = 0;
-int unacked = 0;
+int nextSeqNum = 0;
+struct pkt window[MAX_WINDOW_SIZE];
+struct pkt H_packet;
+int rev = 1;
+int e = 0;
 
-struct pkt window[WINDOW_SIZE];
-struct msg buffer[WINDOW_SIZE];
-int last_in_buffer = -1;
+int top = -1;
+struct msg** buf;
 
 int AddCheckSum(struct pkt packet){
     int sum = packet.seqnum + packet.acknum;
@@ -35,55 +37,72 @@ int AddCheckSum(struct pkt packet){
     return sum;
 }
 
+int inWindow(int seqnum) {
+    return seqnum >= base && seqnum < base + MAX_WINDOW_SIZE;
+}
+
+void sendPackets() {
+    for (int i = base; i < nextSeqNum; ++i) {
+        if (!rev) break; // Only send packets if not waiting for ACK
+        tolayer3(0, window[i % MAX_WINDOW_SIZE]);
+        starttimer(0, 30);
+    }
+}
+
 /* called from layer 5, passed the data to be sent to other side */
 void A_output(message)
         struct msg message;
 {
-    if (nextseqnum < base + WINDOW_SIZE) {
-        // send packet
-        struct pkt packet;
-        packet.seqnum = nextseqnum;
-        packet.acknum = 0;
-        memset(packet.payload, '\0', 20);
-        strncpy(packet.payload, message.data, 20);
-        packet.checksum = AddCheckSum(packet);
-        window[nextseqnum % WINDOW_SIZE] = packet;
-
-        tolayer3(0, packet);
-        unacked++;
-        if (base == nextseqnum) {
-            starttimer(0, 20.0f);
-        }
-        nextseqnum++;
-    } else {
-        // buffer the message
-        buffer[++last_in_buffer] = message;
+    if (!inWindow(nextSeqNum)) {
+        // Window is full, buffer the message
+        if (top >= MAX_STACK_SIZE - 1) return; // Stack overflow
+        memset(buf[++top]->data, '\0', 20);
+        memcpy(buf[top]->data, message.data, 20);
+        return;
     }
+
+    // Create and send packet
+    struct pkt p;
+    memset(p.payload, '\0', 20);
+    strncpy(p.payload, message.data, 20);
+    p.seqnum = nextSeqNum;
+    p.acknum = -1; // Not used in GBN
+    p.checksum = AddCheckSum(p);
+    window[nextSeqNum % MAX_WINDOW_SIZE] = p;
+
+    // Update state
+    nextSeqNum++;
+    if (base == p.seqnum) {
+        starttimer(0, 30);
+    }
+    sendPackets();
 }
 
 /* called from layer 3, when a packet arrives for layer 4 */
 void A_input(packet)
         struct pkt packet;
 {
-    if (AddCheckSum(packet) == packet.checksum && packet.acknum >= base) {
-        base = packet.acknum + 1;
-        unacked -= (base - window[base % WINDOW_SIZE].seqnum);
-        if (unacked == 0) {
-            stoptimer(0);
-        } else {
-            starttimer(0, 20.0f);
-        }
-    }
+    if (AddCheckSum(packet) != packet.checksum) return;
+    // Acknowledgement for already acked packet
+    if (packet.acknum < base) return;
+
+// Update state
+    base = packet.acknum + 1;
+    stoptimer(0);
+
+// Send buffered packets if any
+    sendPackets();
+
 }
 
 /* called when A's timer goes off */
 void A_timerinterrupt()
 {
-    for (int i = base; i < nextseqnum; ++i) {
-        tolayer3(0, window[i % WINDOW_SIZE]);
+// Resend all packets in window
+    for (int i = base; i < nextSeqNum; ++i) {
+        tolayer3(0, window[i % MAX_WINDOW_SIZE]);
+        starttimer(0, 30);
     }
-    stoptimer(0);
-    starttimer(0, 20.0f);
 }
 /* the following routine will be called once (only) before any other */
 /* entity A routines are called. You can use it to do any initialization */

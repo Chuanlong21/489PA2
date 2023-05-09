@@ -1,40 +1,18 @@
 #include "../include/simulator.h"
-#include "string.h"
-#include "stdlib.h"
-#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-
-
-/* ******************************************************************
- ALTERNATING BIT AND GO-BACK-N NETWORK EMULATOR: VERSION 1.1  J.F.Kurose
-
-   This code should be used for PA2, unidirectional data transfer 
-   protocols (from A to B). Network properties:
-   - one way network delay averages five time units (longer if there
-     are other messages in the channel for GBN), but can be larger
-   - packets can be corrupted (either the header or the data portion)
-     or lost, according to user-defined probabilities
-   - packets will be delivered in the order in which they were sent
-     (although some can be lost).
-**********************************************************************/
-
-/********* STUDENTS WRITE THE NEXT SIX ROUTINES *********/
 #define MAX_STACK_SIZE 1000
 
-
-int s = 1;
-struct pkt H_packet;
-int rev = 1;
+int seqnum = 0;
+struct pkt last_packet_sent;
+int waiting_for_ack = 0;
 int e = 0;
+struct msg *buffer[MAX_STACK_SIZE];
+int buffer_top = -1;
 
-int top = -1;
-struct msg** buf;
-
-int isEmpty() {
-    return top == -1;
-}
-
-int AddCheckSum(struct pkt packet){
+// Calculate the checksum of a packet
+int calculate_checksum(struct pkt packet) {
     int sum = packet.seqnum + packet.acknum;
     for (int i = 0; i < 20; ++i) {
         sum += packet.payload[i];
@@ -42,97 +20,72 @@ int AddCheckSum(struct pkt packet){
     return sum;
 }
 
-/* called from layer 5, passed the data to be sent to other side */
-void A_output(message)
-  struct msg message;
-{
-    if (!rev){
-        memset(buf[++top]->data, '\0', 20);
-        memcpy(buf[top]->data, message.data, 20);
+// Send a packet from A to B
+void A_output(struct msg message) {
+    if (waiting_for_ack || seqnum == 1) {
+        buffer[++buffer_top] = malloc(sizeof(struct msg));
+        memcpy(buffer[buffer_top]->data, message.data, 20);
         return;
     }
-        struct pkt p;
-        memset(p.payload, '\0', 20);
-        strncpy(p.payload, message.data,20);
-        p.seqnum = !s;
-        p.checksum = AddCheckSum(p);
-
-        s = p.seqnum;
-        H_packet = p;
-
-        starttimer(0,60);
-        tolayer3(0,H_packet);
-        rev = 0;
+    // Construct packet with message data
+    struct pkt packet;
+    memset(packet.payload, '\0', 20);
+    strncpy(packet.payload, message.data, 20);
+    packet.seqnum = seqnum;
+    packet.checksum = calculate_checksum(packet);
+    // Send packet to layer 3
+    last_packet_sent = packet;
+    tolayer3(0, packet);
+    // Start timer and wait for ACK
+    waiting_for_ack = 1;
+    starttimer(0, 60);
+    // Flip sequence number for next packet
+    seqnum = !seqnum;
 }
 
-/* called from layer 3, when a packet arrives for layer 4 */
-void A_input(packet)
-  struct pkt packet;
-{
-    int checksum = AddCheckSum(packet);
-    if (checksum != packet.checksum || packet.acknum != H_packet.seqnum) return;
-    stoptimer(0);
-    rev = 1;
-    if (!isEmpty()){
-        struct pkt p;
-        p.seqnum = !s;
-        p.acknum = 0;
-        memset(p.payload, '\0', 20);
-        strncpy(p.payload, buf[top]->data,20);
-        p.checksum = AddCheckSum(p);
-
-        s = p.seqnum;
-        H_packet = p;
-
-        starttimer(0,60);
-        tolayer3(0,H_packet);
-        rev = 0;
-        top--;
+// Receive an ACK packet at A
+void A_input(struct pkt packet) {
+    // Check if ACK is for the last packet we sent and if it's not corrupted
+    if (packet.acknum == last_packet_sent.seqnum && calculate_checksum(packet) == packet.checksum) {
+        stoptimer(0);
+        waiting_for_ack = 0;
+        if (buffer_top >= 0) {
+            // Send next buffered message
+            struct msg next_message = *buffer[0];
+            free(buffer[0]);
+            for (int i = 0; i < buffer_top; i++) {
+                buffer[i] = buffer[i + 1];
+            }
+            buffer_top--;
+            A_output(next_message);
+        }
     }
 }
 
-/* called when A's timer goes off */
-void A_timerinterrupt()
-{
-    //处理超时
-    starttimer(0,60);
-    tolayer3(0,H_packet);
-
+// Handle timer interrupt at A
+void A_timerinterrupt() {
+    tolayer3(0, last_packet_sent);
+    starttimer(0, 60);
 }
 
-/* the following routine will be called once (only) before any other */
-/* entity A routines are called. You can use it to do any initialization */
-void A_init()
-{
-    buf = malloc(MAX_STACK_SIZE * sizeof (struct msg*));
-    for (int i = 0; i < MAX_STACK_SIZE; ++i) {
-        buf[i] = malloc(sizeof (struct msg));
+// Receive a packet at B
+void B_input(struct pkt packet) {
+    // Check if packet is not corrupted
+    if (calculate_checksum(packet) != packet.checksum) {
+        return;
     }
-}
-
-/* Note that with simplex transfer from a-to-B, there is no B_output() */
-
-/* called from layer 3, when a packet arrives for layer 4 at B*/
-void B_input(packet)
-  struct pkt packet;
-{
-    int checksum = AddCheckSum(packet);
-    if (checksum != packet.checksum) return;
-
-    struct pkt ack;
-    ack.acknum = packet.seqnum;
-    ack.checksum = ack.acknum;
-    if (e == packet.seqnum){
+    // Construct and send ACK packet
+    struct pkt ack_packet;
+    ack_packet.acknum = packet.seqnum;
+    ack_packet.checksum = ack_packet.acknum;
+    tolayer3(1, ack_packet);
+    if (packet.seqnum == e) {
+        // Send message to layer 5 and update expected sequence number
+        tolayer5(1, packet.payload);
         e = !e;
-        tolayer5(1,packet.payload);
     }
-    tolayer3(1, ack);
-
 }
 
-/* the following routine will be called once (only) before any other */
-/* entity B routines are called. You can use it to do any initialization */
-void B_init()
-{
+void A_init() {}
 
-}
+void B_init() {}
