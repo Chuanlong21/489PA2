@@ -47,7 +47,6 @@ void A_output(message)
   struct msg message;
 {
     if (!rev){
-//        push(message.data);
         memset(buf[++top]->data, '\0', 20);
         memcpy(buf[top]->data, message.data, 20);
         return;
@@ -120,16 +119,15 @@ void B_input(packet)
     int checksum = AddCheckSum(packet);
     if (checksum != packet.checksum) return;
 
-    if(checksum == packet.checksum){
-        struct pkt ack;
-        ack.acknum = packet.seqnum;
-        ack.checksum = ack.acknum;
-        if (e == packet.seqnum){
-            tolayer5(1,packet.payload);
-            e = !e;
-        }
-        tolayer3(1, ack);
+    struct pkt ack;
+    ack.acknum = packet.seqnum;
+    ack.checksum = ack.acknum;
+    if (e == packet.seqnum){
+        e = !e;
+        tolayer5(1,packet.payload);
     }
+    tolayer3(1, ack);
+
 }
 
 /* the following routine will be called once (only) before any other */
