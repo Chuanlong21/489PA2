@@ -1,6 +1,9 @@
 #include "../include/simulator.h"
 #include "string.h"
 #include "stdlib.h"
+#include <stdio.h>
+
+
 
 /* ******************************************************************
  ALTERNATING BIT AND GO-BACK-N NETWORK EMULATOR: VERSION 1.1  J.F.Kurose
@@ -16,11 +19,59 @@
 **********************************************************************/
 
 /********* STUDENTS WRITE THE NEXT SIX ROUTINES *********/
+#define MAX_STACK_SIZE 1000
+
 int ackNum = 0;
+int seq = 1;
 struct pkt H_packet;
 int rev = 1;
-int seq = 0;
-char * buffer;
+
+//char * buffer;
+
+char* stack[MAX_STACK_SIZE];
+int top = -1;
+
+void push(char* val) {
+    if (top < MAX_STACK_SIZE - 1) {
+        stack[++top] = malloc(20);
+        memcpy(stack[top], val, 20);
+    } else {
+        printf("Stack overflow!\n");
+    }
+}
+
+char* pop() {
+    if (top >= 0) {
+        return stack[top--];
+    } else {
+        printf("Stack underflow!\n");
+        return NULL;
+    }
+}
+char* peek() {
+    if (top >= 0) {
+        return stack[top];
+    } else {
+        printf("Stack is empty!\n");
+        return NULL;
+    }
+}
+
+int isEmpty() {
+    return top == -1;
+}
+
+//int main(void) {
+//    push("halo");
+//    pop();
+//    push("hahah");
+//    push("bb");
+//    for (int i = 0; i < top+1; ++i) {
+//        printf("%s\n",stack[i]);
+//    }
+//
+//    return 0;
+//}
 
 int AddCheckSum(struct pkt packet){
     int sum = packet.seqnum + packet.acknum;
@@ -35,32 +86,38 @@ void A_output(message)
   struct msg message;
 {
     if (!rev){
-        strncpy(buffer,message.data,20);
+        push(message.data);
         return;
     }
-
         strncpy(H_packet.payload, message.data,20);
-        H_packet.acknum = ackNum;
-        H_packet.seqnum = seq;
+        H_packet.acknum = 0;
+        H_packet.seqnum = !seq;
         H_packet.checksum = AddCheckSum(H_packet);
+
+        seq = H_packet.seqnum;
+        ackNum = H_packet.acknum;
+
         starttimer(0,5);
         tolayer3(0,H_packet);
         rev = 0;
-
 }
 
 /* called from layer 3, when a packet arrives for layer 4 */
 void A_input(packet)
   struct pkt packet;
 {
-    stoptimer(1);
-    if (packet.acknum != ackNum){
-        A_timerinterrupt();
-        return;
-    }
-    if (ackNum == 0) ackNum = 1;
-    else ackNum = 0;
+    int checksum = AddCheckSum(packet);
+    if (checksum != packet.checksum ) return;
+    stoptimer(0);
+    rev = 1;
+    if (!isEmpty()){
+        struct pkt p;
+        p.seqnum = !seq;
+        p.acknum = 0;
+        strncpy(p.payload, peek(),20);
 
+
+    }
 }
 
 /* called when A's timer goes off */
@@ -78,8 +135,7 @@ void A_timerinterrupt()
 /* entity A routines are called. You can use it to do any initialization */
 void A_init()
 {
-    ackNum = 0;
-    buffer = malloc(20);
+
 }
 
 /* Note that with simplex transfer from a-to-B, there is no B_output() */
@@ -88,16 +144,16 @@ void A_init()
 void B_input(packet)
   struct pkt packet;
 {
-    stoptimer(0);
     int checksum = AddCheckSum(packet);
+    if (checksum != packet.checksum) return;
+
     if(checksum == packet.checksum){
-        starttimer(1,5);
-        rev =  1;
-        tolayer3(1, packet);
+        struct pkt ack;
+        ack.acknum = packet.seqnum;
+        ack.seqnum = 0;
+        ack.checksum = ack.acknum;
+        tolayer3(1, ack);
         tolayer5(1,packet.payload);
-    } else {
-        rev = 0;
-        A_timerinterrupt();
     }
 }
 
